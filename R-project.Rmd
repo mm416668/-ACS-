@@ -1,0 +1,1042 @@
+---
+title: "R Term Project"
+author: "Yang Meng"
+date: '2018-12-11'
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+```
+
+There are four parts of the project, and the first part I do nothing about the dataset as I just do a general summary about the dataset. I will put every processes in the second part as .
+
+## 1. Data Summary
+
+I am interested in the personal data, so I choose the United States Population Records. The datasets are a sample of the actual responses to the American Community Survey and include most population and housing characteristics and it includes 2012-2016 ACS 5-year PUMS.
+
+```{r}
+raw_data <- read_csv('raw_data.csv')
+
+```
+
+
+In this report, I choose the interesting part of the dataset and select `r ncol(raw_data)` variables, which including SEX(gender), AGEG(age), MAR(marriage),COW(work place),SCHL(education),MLPE(served Vietnam era) , MLPH(served Korean War), HICOV(have health insurance), SSP(Social Security Income in the past 12 months), PINCP(Total Personal Income),DIS(disabled or not) and ADJINC(Income adjust with inflation). In total I load  `r nrow(raw_data)` observations from csv file, and combine them and then write them in a csv file and store in my disk.
+
+After loading data, I change some variables' names: for changing names, I maintain the majority of the original name because I need to read the dictionary always and it help me to find the explanation of different variables. I change some variables' name and in the same way with the original name with Capital Letter. After that any new variables, I add I will use lower letter. Then there is a clearly way to see which is original and which is mutate.
+
+
+
+```{r}
+names(raw_data)[7] <- "VIETNAM"
+names(raw_data)[8] <- "KOREAN"
+names(raw_data)[10] <- "SOCIALINCOM"
+names(raw_data)[12] <- "INCOME"
+```
+
+Then I change the numeric variables to factor and also change the factor name. For those variables, SCHL has a level from lowest to highest. And the structure of the data set is showed:
+
+
+```{r}
+raw_data$SEX <- as.factor(raw_data$SEX)
+raw_data$MAR <- as.factor(raw_data$MAR)
+raw_data$COW <- as.factor(raw_data$COW)
+raw_data$SCHL <- as.factor(raw_data$SCHL)
+SCHL_level <- c('bb','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21', '22','23','24')
+raw_data$SCHL <- factor(raw_data$SCHL, levels = SCHL_level)
+raw_data$HICOV <- as.factor(raw_data$HICOV)
+raw_data$DIS <- as.factor(raw_data$DIS)
+raw_data <- raw_data %>%
+  mutate(SEX = fct_recode(SEX,
+          "Male" = "1",
+           "Female" = "2"),
+         MAR = fct_recode( MAR,
+          "Married" = "1",
+          "Widowed" = "2",
+          "Divorced" = "3",
+          "Seprated" = "4",
+          "Never Married" = "5"
+           
+         ),
+         COW = fct_recode(COW,
+            "Private_for_profit" = "1",
+            "Private_non_profit " = "2",
+            "Local_gov" = "3",
+            "State_gov" = "4",
+            "Fed_gov"="5",
+            "Sel_no_incor" = "6",
+            "Sel_incor" = "7",
+            "Family" = "8",
+            "Unemp" = "9"
+            ),
+         SCHL = fct_recode(SCHL,
+            "N/A" = "bb", 
+"Noschl" = "1",  
+"Preschl" = "2", 
+"Kindergarten" = "3", 
+"Grade1" ="4",
+"Grade2" = "5", 
+"Grade3" = "6", 
+"Grade4" = "7",
+"Grade5" = "8", 
+"Grade6" ="9", 
+"Grade7" = "10", 
+"Grade8" = "11", 
+"Grade9" = "12", 
+"Grade10" = "13",
+"Grade11" ="14", 
+"Nodiploma" = "15", 
+"Diploma" = "16", 
+"GED" = "17", 
+"Collegeless" = "18", 
+"Collegenode" = "19", 
+"Associate" ="20", 
+"Bachelor" = "21",
+"Master" = "22",
+"Professional" = "23",
+"Doctorate" = "24" 
+         ),
+  HICOV = fct_recode(HICOV,
+            "Yes" = "1",
+            "No" = "2"),
+DIS = fct_recode(DIS,
+                 "Yes" = "1",
+                 "No" = "2")
+
+         ) 
+
+kable(raw_data[1:5,],
+      caption = "table1")%>%
+  kable_styling()
+```
+
+And for the summary of numeric data is showed as
+
+```{r}
+kable(raw_data %>%
+  summarise(max.age = max(AGEP),
+            min.age = min(AGEP),
+            mean.age = mean(AGEP, na.rm = T)),
+  caption = "table2") %>%
+  kable_styling()
+kable(raw_data %>%
+  summarise(max.income = max(INCOME, na.rm = T),
+            min.income = min(INCOME,na.rm = T),
+            mean.income = mean(INCOME, na.rm = T)),
+  caption = "table3") %>%
+  kable_styling()
+kable(raw_data %>%
+  summarise(max.socialincome = max(SOCIALINCOM, na.rm = T),
+            min.socialincome = min(SOCIALINCOM, na.rm = T),
+            mean.socialincome = mean(SOCIALINCOM, na.rm = T)),
+  caption = "table4") %>%
+  kable_styling()
+
+
+```
+
+For the income we can see that there is a huge range of the income as the maximum of income is `r max(raw_data$INCOME, na.rm = TRUE)` and the minimum is `r min(raw_data$INCOME, na.rm = TRUE)` and the average of income is `r mean(raw_data$INCOME, na.rm = TRUE)`. The gap between the maxium and minimun is `r max(raw_data$INCOME, na.rm = TRUE)-min(raw_data$INCOME, na.rm = TRUE)`. Here we won't discuss deeply as we will analysis further.
+
+There are couple of variables is binomial which only has yes or no. Because those variables (VIETNAM, KOREAN, HICOV, DIS) are used for specific people so we won't present the summary of them.
+
+
+For the categorical data, we can take a look at each category in bar chart.
+
+### Gender
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x= SEX))+
+  geom_bar(stat = "count")+ 
+  ggtitle("graph1")
+```
+
+There are `r sum(raw_data$SEX == "Female")` females and `r sum(raw_data$SEX == "Male")` and from the bar chart we can see they are approximately equal.
+
+### Marriage
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph2")
+```
+
+In the bar chart, we can see that the marriage and never marriage are two major groups in the summary. Because in never marriage, there will be kids and here we don't discuss further so just leave it there. There are another thing we should pay attention is the percentage of divorced of marriage is `r sum(raw_data$MAR == "Divorced")/sum(raw_data$MAR == "Married")`, which means 1/5 people divorced than marriage.
+
+### Education
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())+
+  ggtitle("grpah3")
+```
+
+In this graph, we can see most people just finish the 12 grade without diploma. And also people with higher education are also take a main component.
+
+### Work organization
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = COW, fill = COW))+
+  geom_bar(stat = "count") +
+  theme(axis.text.x = element_blank())+
+  ggtitle("graph4")
+```
+
+We can see that the majority of organization people work is private organization for profit.
+
+Let's move to numeric variables. As this is just summary I won't do any preprocessing of the data
+
+### Age
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = AGEP)) +
+  geom_histogram(stat = "bin") +
+  ggtitle("graph5")
+```
+
+We can see that the age is approximately normal distributed with the average of `r mean(raw_data$AGEP)`
+
+As we analysis in previous that there is a huge range in income so we won't do other discussion in this part.
+
+
+## 2. Methodology
+
+And during my reading of dictionary, there are two variables draw me attention: MLPE and MLPH, one is the people who joined the Vietnam War and another is the people who joined the Korean War.  They are the witness of the history. I am wondering how about their life right now: how about their marriage, how about their income, how about their education level, what's kind of organization they work with, etc.
+
+### Meta Methodology
+
+This is the map for the whole analysis. Some of my processors are just repeat, so in this report I may don't present the actual result or outcome. 
+
+In general, we have three groups and I compare variables in each group. As this report only focus on certain groups, I don't add the person weight in the analysis. It may affect my report a little bit but this can be affected and it will make the steps more simple and clear.
+
+First, I check with missing value, if there is missing value to see how many of the missing values, if there are a lot then we won't use that variable. If there are acceptable missing value, then figure out how to deal with it, if there is no missing value, move to next step.
+
+Second, analysis for the categories: see the proportion with graph and wondering the top of the categories.
+Analysis for numeric, see the average and if there is a difference, by using statistics method to see the true difference.
+
+Third, for numeric with outlier, I would like to focus on the outliers, such as the income, to see how make them have low-income.
+
+So, I focus only on low income group and compare them with regular group to figure out how to find a person is low income, or what factors to make them low income.
+
+
+
+### Methodology step by step
+
+I would like to generate them in three groups, the one only joined Vietnam war, the one only joined Korean war and the one who joined both. I add a new variable 'war' to indicate which war they joined, either the Vietnam War or Korean War or both. There are three groups in the dataset and it is a tidy dataset and I can use it for the following analysis.
+
+After filtering and mutating new variable I saved into another dataset named'raw_data_1' which will be the main dataset we focus in following steps.
+
+
+```{r}
+raw_data_1 <- raw_data %>%
+  subset(VIETNAM == 1 | KOREAN== 1) %>%
+  mutate(
+    war = case_when(VIETNAM == 1 & KOREAN == 0 ~ 'Vietnam',
+                    KOREAN == 1 & VIETNAM == 0 ~ 'Korean',
+                    VIETNAM ==1 & KOREAN ==1 ~"Both"))
+```
+
+Next, I would like to take a look at the general information of this new dataset. 'raw_data_1' has `r nrow(raw_data_1)` observations and three groups -- Vietnam, Korean, and Both. And the for each of group we can use bar chart to take a look. There are `r sum(raw_data_1$war == 'Korean')` joined Korean war, `r sum(raw_data_1$war == 'Vietnam')` joined Vietnam war and `r sum(raw_data_1$war == 'both')` joined both. The bar chart for each of groups are showed:
+
+```{r}
+ggplot(raw_data_1) +
+  geom_bar(aes(x = war), stat = "count") +
+  ggtitle("graph6")
+
+```
+
+### Gender
+
+I start with the gender. And follow the meta methodology, there are `r sum(is.na(raw_data_1$SEX))`missing values. It is a good variable to take a look and we present the bar chart in three groups.
+
+```{r}
+raw_data_1 %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = war, fill = SEX),
+           position = "fill") +
+  ggtitle("graph7")
+
+```
+
+It is clear that in three groups, male takes the majority and it makes sense as more male joined than female.
+
+### Marriage
+
+I move to the marriage prospect to see the situation in three groups. "Mar" is also categorical data. I check the missing value and there is `r sum(is.na(raw_data_1$MAR))` missing values. The graph is showed as
+
+```{r}
+raw_data_1 %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = war, fill = MAR),
+           position = "fill")+
+  ggtitle("graph8")
+```
+
+In the graph7, there is an obvious difference between Korean and Vietnam. It seems that Both group is similar with Korean group. So, I am wondering is there a true difference in each marriage status proportion or the difference is just by chance.
+
+For checking the difference in each proportion, I use the chi-square test. And for deliver a chi-square test I first calculate each marriage status proportion in three groups. And merged them by inner join. And deliver the chi-square test.
+
+
+```{r}
+Both <- raw_data_1 %>%
+  filter(war == "Both") %>%
+  group_by(MAR) %>%
+  
+  summarise(
+    both = n()/12389
+  ) 
+
+Vietnam <- raw_data_1 %>%
+  filter(war == "Vietnam") %>%
+  group_by(MAR) %>%
+  
+  summarise(
+    vietnam = n()/411765
+  ) 
+  
+
+  
+Korean <- raw_data_1 %>%
+  filter(war == "Korean") %>%
+  group_by(MAR) %>%
+  summarise(
+    korean = n()/111591
+  ) 
+
+
+kable(summary_2 <- inner_join(Both,Korean) %>% inner_join(Vietnam),
+      caption = "table5") %>%
+  kable_styling()
+
+compare <- table(raw_data_1$war, raw_data_1$MAR)
+chisq.test(compare)
+
+```
+
+From thoses two tables and chi-sqaure test we can say that there is a difference among three groups and from the graph7 we can see that the Vietnam is different with other two groups
+
+### Age
+
+This is one of variable that I am interested in. I would like to see there is a change of ages in those three groups. I believe the answer is "Yes". Because Korean War happened in 1950's and Vietnam War happened in 1980's. There almost 30 years' gap. But we can still move to the number and graphic to take a look.
+
+I still check the missing value firstly. The AGEP has `r sum(is.na(raw_data_1$AGEP))`missing values so it is also a good quality.
+
+And then I separate the dataset by war and calculate each group's average age. Also, I draw the boxplot to show the three groups' age.
+
+```{r}
+Age <- raw_data_1 %>%
+       group_by(war) %>%
+       summarise(avg_age = mean(AGEP))
+kable(Age) %>%
+  kable_styling()
+
+raw_data_1 %>%
+  ggplot()+
+  geom_boxplot(mapping = aes(x = war, y = AGEP))+
+  ggtitle("graph9")
+
+```
+
+In the table and graph8 we can see that the Vietnam is different with other two groups. It proves that my guess is right.And there is another thing should be paid attention that people joined Korean War and Both are really old. There are some outliers in the graph, but it doesn't affect the whole summary much.
+
+### Income
+
+This is the most important variable in my research. As I would like to know the veteran's life, income is the most important measure to evaluate. The INCOME variable has `r sum(is.na(raw_data_1$INCOME))`missing value no we move to next step to take a look at the income summary.
+
+
+As I discuss at the beginning, there is a huge gap between the higher income and lower income. The situation is same in three groups. with the highest `r max(raw_data_1$INCOME)` and lowest income `r min(raw_data_1$INCOME)`. 
+
+Without any processing we can draw a summary of the income in three groups:
+
+```{r}
+ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph10")
+
+```
+
+Then we use income to multiply the inflation adjust and create a new variable 'adjustincome'. And we would like to compare those graph to see there is a difference.
+
+```{r}
+raw_data_1 <- raw_data_1 %>%
+  mutate(adjustincome = INCOME * (ADJINC/100000))
+ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = adjustincome),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph11")
+
+```
+
+As there is no obvious change with the inflation index, I decide to ignore the adjust income and still use the original one. Because the gap is so huge I decide only to focus on first quarter to the third quarter. This range will contain most of samples in a statistic analysis way
+
+```{r}
+raw_data_1 %>%
+  filter(INCOME >= 19200 & INCOME <59000 ) %>%
+  ggplot() +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph12")
+
+```
+
+In graph11 we can see that the people join both war has a higher median than other two groups.
+
+But what draw me attention is not the gap between high income and low income. There are still a lot of people suffered from a really low income. If we take a look at the summary of the income without adjust the first quarter of income is `r summary(raw_data_1$INCOME)[2]`, it means there are still certain number of people's annual income is less than this amount. And the point is those are people who served for the war!
+
+So, I decide to change my focus on the veteran who get a really low income and to figure out why they are so poor and how can we build a model to find those people and help them.
+
+### Focus on veteran with low income
+
+I need to define the low income which is lower than `r summary(raw_data_1$INCOME)[2]`, the first quarter of overall of the group. and mutate another factor variable 'low', which represent the low-income people. And make different graphs for compare low-income group and regular income group
+
+```{r}
+model_data <- raw_data_1 %>%
+  mutate(low  = case_when(
+    INCOME <= 19200 ~ "Yes",
+    INCOME > 19200 ~ "No"
+  ))
+```
+
+And I also create a dataset with only low-income person only. I repeat analysis in several perspectives, including age, working organization, marriage, health coverage. Then I compare each variable's proportion with regular group to figure difference. But those variables have approximately same proportion in low income and regular income. There are other three variables have a big difference: Social income, Disability and Education.
+
+```{r}
+lowincome <- raw_data_1 %>%
+  filter(INCOME <= 19200) %>%
+  select(AGEP, COW, SCHL, HICOV, DIS, SOCIALINCOM, INCOME)
+
+```
+
+I find there is a strong correlation`r cor(lowincome$INCOME,lowincome$SOCIALINCOM)` with social income and income. For this finding, I will explain more in finding section. For lower-income people, there are more disabled people than regular. The proportion of disabled for low-income group is `r  sum(lowincome$DIS == "Yes") / nrow(lowincome)`. It seems that those low-income persons only relay on the social income. But their social income is very limited. That's explained why they get really low total income.
+
+It makes sense that people with disability and lower education will get lower income. And a lot of them may only depend on social security income to support. I also find there is a strong correlation with social income and income, and for lower income people, there are more disabled people than others. From this point, I just build a model to identify the probability of a poor veteran. 
+
+WIth these three factors I can build a linear regression to predict total income based on their social income.
+
+## Findings
+
+The findings in my analysis may have two parts: the overall analysis and second is the analysis for veteran.
+
+### Overall analysis
+
+By exploring the whole dataset without any setting, I find in the total population the females and males are most equal without the weight of the survey and the result is showed in graph1.
+
+Then when move to marriage, there are two main groups in the marriage from graph2 -- married and never married. As the research is delivered by all age range, I think there are many kids so we can only focus on the marriage part. If we want to develop the research a little bit we can filter the age which may elder than 18.
+
+
+```{r}
+
+p3 <- ggplot(data = raw_data, mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph2")
+p4 <- raw_data %>%
+  filter(AGEP >= 18) %>%
+  ggplot( mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph13")
+
+gridExtra::grid.arrange(p3, p4, nrow = 2)
+
+```
+
+And in the graph, we can see that married still be the majority group in marriage status analysis.
+
+Then we take a look at the education in gprah3, it seems that in US most people finished 12 grade or high school without diploma. But here we still can do a deeper research as we can filter the age more than 18.
+
+```{r}
+
+
+p1 <- ggplot(data = raw_data, mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())+
+  ggtitle("grpah3")
+p2 <- raw_data %>%
+  filter(AGEP >= 18) %>%
+ggplot(mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())+
+  ggtitle("grpah14")
+
+gridExtra::grid.arrange(p1, p2, nrow = 2)
+
+```
+
+Compare to graph3 we can see that the grad 12 without diploma is still the biggest group but more proportion of people have higher degrees. We can do a predict the average education level for people over 18 years old is high school diploma, but there is also a certain number of people with higher education, such as associate or bachelor.
+
+For working organization in graph4, I find that most people choose the private sector for profit organization to work.
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = COW, fill = COW))+
+  geom_bar(stat = "count") +
+  theme(axis.text.x = element_blank())+
+  ggtitle("graph4")
+
+```
+
+For age in graph5, I find the distribution of age is approximately normal and there is no obvious sign that for aging society.
+
+```{r}
+ggplot(data = raw_data, mapping = aes(x = AGEP)) +
+  geom_histogram(stat = "bin") +
+  ggtitle("graph5")
+
+```
+### Analysis for Veteran
+
+After that I only focus on the veteran group which experienced the Vietnam War or Korean War. Because I really have a strong interest on their current life, especially for their income.
+
+By comparing couple of variables in the dataset, I find the group which joined Korean War is different with group of Vietnam War. And people who joined both are similar with the Korean group. By comparing couple of variables and deliver chi-squared test, we can see that there are couple obvious difference in various subjects, including marriage status and age.  
+
+
+```{r}
+p5 <- raw_data_1 %>%
+  ggplot()+
+  geom_boxplot(mapping = aes(x = war, y = AGEP))+
+  ggtitle("graph8")
+p6 <- raw_data_1 %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = war, fill = MAR),
+           position = "fill")+
+  ggtitle("graph7")
+
+gridExtra::grid.arrange(p5, p6, nrow = 2)
+
+```
+
+By compare of those two subjects, I can conclude that these three groups can be separated to two generations, and the difference is because the change of generations.
+
+Next is the important of the whole analysis--the veteran's income:
+
+At beginning, I find there is a huge range in the overall income, and it is the same situation in three groups analysis. Even I consider the inflation index, the gap is still huge from the highest and lowest.
+
+```{r}
+p7 <- ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph9")
+
+raw_data_1 <- raw_data_1 %>%
+  mutate(adjustincome = INCOME * (ADJINC/100000))
+p8 <- ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = adjustincome),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph10")
+
+gridExtra::grid.arrange(p7, p8, nrow = 2)
+```
+
+
+In the comparison we will see there is no change with the inflation index joined in analysis. Then I try to move outliers from the dataset and only focus on income from first quarter to third quarter, which will cover the majority of the dataset by a statistic meaning.
+
+
+```{r}
+raw_data_1 %>%
+  filter(INCOME >= 19200 & INCOME <59000 ) %>%
+  ggplot() +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph12")
+
+
+```
+
+After filtering the income range, we can clearly see that the people joined both war will have a higher median than other two groups. It makes sense as they do contribute more.
+
+But I do find another important situation: there are some people with really low income! When think about they are veterans I feel this group should be paid more attention. As a result, we move to next section, which I only focus on low income group.
+
+### Low-income veteran
+
+I find that there is a certain big number `r nrow(lowincome)`of low income group, which takes `r nrow(lowincome) / nrow(raw_data_1)` of the veteran population.
+
+I would like to know compare to the regular income group, the low-income group's seocial security income and their education level:
+
+```{r}
+ggplot(model_data, aes(x = SOCIALINCOM, y = SCHL)) +
+  geom_point(aes(color = low)) +
+  ggtitle("graph15")
+
+```
+
+From the graph we can see that the low-income people has lower average level of education, as you can see the density of the lower education is higher. It means that more low-income veteran have lower education.
+
+In the comparision of disability, seems like low-income people have more disabled than regular income group.
+
+```{r}
+
+kable(tibble(
+  
+  lowincome = sum(lowincome$DIS == "Yes")/nrow(lowincome),
+  regularincome = sum(model_data$low == "No" & model_data$DIS == "Yes") / sum(model_data$low == "No")
+),
+caption = "table6") %>%
+  kable_styling()
+
+```
+
+I would like to analysis the relationship between their social income and total income, and try to use their social income to predic their total income. The graph for social inocme and total income is showed
+
+```{r}
+ggplot(lowincome) +
+  geom_point(mapping = aes(x = SOCIALINCOM, y = INCOME), alpha = 1/50) +
+  ggtitle("graph16")
+
+```
+
+Compare to the whole data set with regular group, there is a strong parttern in the graph.
+
+```{r}
+ggplot(model_data) +
+  geom_point(mapping = aes(x = SOCIALINCOM, y = INCOME, color = low), alpha = 1/50) + 
+  ggtitle("graph17")
+
+```
+
+In graph 16, there are some outliers and we can see a clear parttern for two groups: one group is only relay on social income, and the other doesn't have any social income.There is a strong pattern for lowincome group that there is a linear regression between social income and total income. 
+
+Then we van draw a linear line in the point
+
+```{r}
+ggplot(lowincome, mapping = aes(x = SOCIALINCOM, y = INCOME)) +
+  geom_point(alpha = 1/50) +
+  geom_smooth(method = lm)
+  ggtitle("graph17")
+
+```
+
+After that I would like to build the model for dependent variable social income and dependent variable income
+
+```{r}
+model_income <- lm(INCOME ~ SOCIALINCOM, data = lowincome)
+summary(model_income)
+
+```
+
+The overall $p-value$ < 0.05, so we beleive there is a relationship between socialincome and income. And in this model, the residuals have a big range as showed from the `r min(model_income$residuals)` to `r max(model_income$residuals)`, and the R-square is 0.4864, means 48.64% of the variance found in the response variable (income) can be explained by the predictor variable (socialincome).
+
+
+And to interpret the coeffecient of variables and intercept, we can use the table to show
+
+```{r}
+kable(summary(model_income)$coef,
+      caption = "table7") %>%
+  kable_styling()
+
+```
+
+
+The intercept of the model is `r model_income$coefficients[1]` and the slope for the linear regression is `r model_income$coefficients[2]`. It means when socialincome = 0, the income is `r model_income$coefficients[1]`. And for every social income increase 1, the income increase `r model_income$coefficients[2]`.
+
+In this model, the f-test is far more than 1, it is a good indicator of whether there is a relationship between our predictor and the response variables.
+
+
+
+## Discussion
+
+From this project I did, I feal some findings are suprised me but it makes sense and quiet reliable.
+
+In this analysis first I focus on the three groups of people who explored Korean War or Vietnam War, I would like to take a look at their life situation, especially their income. It superised me that some of them are really poor. Their annual income far more less than average. So I move to only analysis the low-income group. In this analysis, I ignore the inflation index and weight. I think it may affect the accuracy a little bit but not too much. As I only focus on certain group not the whole population, so the weight won't affect a lot.
+
+In the methodlogy part, I try many ways to dig into the low-income group. But some of them don't present a obvious parttern for low-income worker. I even compare the low-income group with high income group, but this analysis is not relieble, as the high income person may have some opportunities by chance.
+
+I think my analysis will provide a clear view for policy makers, expecially for social security or veteran care orgnization. They are old with the average age`r mean(raw_data_1$AGEP)`, and almost half of them are disabled. The reasons cause their poverty may be their lower education, or their disability. But they do need people pay more attention.
+
+There are some outliers in my model, as there are some even get negative income and I believe most of the people only relay on social income so the intercept should around 0. I think there should be other fators we need to dig into to remove outliers, such as whether they live with their children, or they have other investments, or we need to do some research on each area's policy.
+
+In conclusion, I hope this will draw governments' attention, especialy the social welfare. We can orgnize donation or charity for the veteran and make their lide more comfortable in their old age.
+
+## Appendix1--the code I use in the report
+
+```{r eval=FALSE, echo=TRUE}
+
+# library
+
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+
+
+# select variables and read into R
+
+select_cols <- c('SEX','AGEP','MAR','COW','SCHL','MLPE','MLPH','HICOV','SSP','DIS','PINCP','ADJINC')
+raw_data_a <- fread("ss16pusa.csv",
+                    header = TRUE,
+                    select = select_cols,
+                    verbose = TRUE) 
+raw_data_b <- fread("ss16pusb.csv",
+                    header = TRUE,
+                    select = select_cols,
+                    verbose = TRUE)
+raw_data_c <- fread("ss16pusc.csv",
+                    header = TRUE,
+                    select = select_cols,
+                    verbose = TRUE)
+raw_data_d <- fread("ss16pusd.csv",
+                    header = TRUE,
+                    select = select_cols,
+                    verbose = TRUE)
+
+# combine four files together
+
+raw_data <- cbind(raw_data_a,raw_data_b,raw_data_c)
+
+write.csv(raw_data, file = 'raw_data.csv')
+
+raw_data <- read_csv('raw_data.csv')
+
+# change some variable names
+
+names(raw_data)[7] <- "VIETNAM"
+names(raw_data)[8] <- "KOREAN"
+names(raw_data)[10] <- "SOCIALINCOM"
+names(raw_data)[12] <- "INCOME"
+
+# change factors
+
+raw_data$SEX <- as.factor(raw_data$SEX)
+raw_data$MAR <- as.factor(raw_data$MAR)
+raw_data$COW <- as.factor(raw_data$COW)
+raw_data$SCHL <- as.factor(raw_data$SCHL)
+SCHL_level <- c('bb','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21', '22','23','24')
+raw_data$SCHL <- factor(raw_data$SCHL, levels = SCHL_level)
+raw_data$HICOV <- as.factor(raw_data$HICOV)
+raw_data$DIS <- as.factor(raw_data$DIS)
+raw_data <- raw_data %>%
+  mutate(SEX = fct_recode(SEX,
+          "Male" = "1",
+           "Female" = "2"),
+         MAR = fct_recode( MAR,
+          "Married" = "1",
+          "Widowed" = "2",
+          "Divorced" = "3",
+          "Seprated" = "4",
+          "Never Married" = "5"
+           
+         ),
+         COW = fct_recode(COW,
+            "Private_for_profit" = "1",
+            "Private_non_profit " = "2",
+            "Local_gov" = "3",
+            "State_gov" = "4",
+            "Fed_gov"="5",
+            "Sel_no_incor" = "6",
+            "Sel_incor" = "7",
+            "Family" = "8",
+            "Unemp" = "9"
+            ),
+         SCHL = fct_recode(SCHL,
+            "N/A" = "bb", 
+"Noschl" = "1",  
+"Preschl" = "2", 
+"Kindergarten" = "3", 
+"Grade1" ="4",
+"Grade2" = "5", 
+"Grade3" = "6", 
+"Grade4" = "7",
+"Grade5" = "8", 
+"Grade6" ="9", 
+"Grade7" = "10", 
+"Grade8" = "11", 
+"Grade9" = "12", 
+"Grade10" = "13",
+"Grade11" ="14", 
+"Nodiploma" = "15", 
+"Diploma" = "16", 
+"GED" = "17", 
+"Collegeless" = "18", 
+"Collegenode" = "19", 
+"Associate" ="20", 
+"Bachelor" = "21",
+"Master" = "22",
+"Professional" = "23",
+"Doctorate" = "24" 
+         ),
+  HICOV = fct_recode(HICOV,
+            "Yes" = "1",
+            "No" = "2"),
+DIS = fct_recode(DIS,
+                 "Yes" = "1",
+                 "No" = "2")
+
+         ) 
+
+kable(raw_data[1:5,],
+      caption = "table1")
+
+# summary
+
+kable(raw_data %>%
+  summarise(max.age = max(AGEP),
+            min.age = min(AGEP),
+            mean.age = mean(AGEP, na.rm = T)),
+  caption = "table2")
+kable(raw_data %>%
+  summarise(max.income = max(INCOME, na.rm = T),
+            min.income = min(INCOME,na.rm = T),
+            mean.income = mean(INCOME, na.rm = T)),
+  caption = "table3")
+kable(raw_data %>%
+  summarise(max.socialincome = max(SOCIALINCOM, na.rm = T),
+            min.socialincome = min(SOCIALINCOM, na.rm = T),
+            mean.socialincome = mean(SOCIALINCOM, na.rm = T)),
+  caption = "table4")
+
+ggplot(data = raw_data, mapping = aes(x= SEX))+
+  geom_bar(stat = "count")+ 
+  ggtitle("graph1")
+
+ggplot(data = raw_data, mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph2")
+
+ggplot(data = raw_data, mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())+
+  ggtitle("grpah3")
+
+ggplot(data = raw_data, mapping = aes(x = COW))+
+  geom_bar(stat = "count") +
+  ggtitle("graph4")
+
+ggplot(data = raw_data, mapping = aes(x = AGEP)) +
+  geom_histogram(stat = "bin") +
+  ggtitle("graph5")
+
+# methedology 
+
+# separate data in three groups and only focus on those three groups
+
+raw_data_1 <- raw_data %>%
+  subset(VIETNAM == 1 | KOREAN== 1) %>%
+  mutate(
+    war = case_when(VIETNAM == 1 & KOREAN == 0 ~ 'Vietnam',
+                    KOREAN == 1 & VIETNAM == 0 ~ 'Korean',
+                    VIETNAM ==1 & KOREAN ==1 ~"Both"))
+
+
+ggplot(raw_data_1) +
+  geom_bar(aes(x = war), stat = "count") +
+  ggtitle("graph6")
+
+raw_data_1 %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = war, fill = SEX),
+           position = "fill") +
+  ggtitle("graph7")
+
+raw_data_1 %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = war, fill = MAR),
+           position = "fill")+
+  ggtitle("graph8")
+
+Age <- raw_data_1 %>%
+       group_by(war) %>%
+       summarise(avg_age = mean(AGEP))
+kable(Age)
+raw_data_1 %>%
+  ggplot()+
+  geom_boxplot(mapping = aes(x = war, y = AGEP))+
+  ggtitle("graph9")
+
+
+ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph10")
+
+raw_data_1 <- raw_data_1 %>%
+  mutate(adjustincome = INCOME * (ADJINC/100000))
+ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = adjustincome),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph11")
+raw_data_1 %>%
+  filter(INCOME >= 19200 & INCOME <59000 ) %>%
+  ggplot() +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph12")
+
+# define a low-income group
+model_data <- raw_data_1 %>%
+  mutate(low  = case_when(
+    INCOME <= 19200 ~ "Yes",
+    INCOME > 19200 ~ "No"
+  ))
+lowincome <- raw_data_1 %>%
+  filter(INCOME <= 19200) %>%
+  select(AGEP, COW, SCHL, HICOV, DIS, SOCIALINCOM, INCOME)
+
+# findings
+
+# overall analysis
+
+
+p3 <- ggplot(data = raw_data, mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph2")
+p4 <- raw_data %>%
+  filter(AGEP >= 18) %>%
+  ggplot( mapping = aes(x = MAR))+
+  geom_bar(stat = "count") +
+  ggtitle("graph13")
+
+gridExtra::grid.arrange(p3, p4, nrow = 2)
+
+p7 <- ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph9")
+
+raw_data_1 <- raw_data_1 %>%
+  mutate(adjustincome = INCOME * (ADJINC/100000))
+p8 <- ggplot(data = raw_data_1) +
+  stat_summary(mapping = aes(x=war, y = adjustincome),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph10")
+
+gridExtra::grid.arrange(p7, p8, nrow = 2)
+
+raw_data_1 %>%
+  filter(INCOME >= 19200 & INCOME <59000 ) %>%
+  ggplot() +
+  stat_summary(mapping = aes(x=war, y = INCOME),
+               fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)+
+  ggtitle("graph12")
+
+ggplot(model_data, aes(x = SOCIALINCOM, y = SCHL)) +
+  geom_point(aes(color = low)) +
+  ggtitle("graph15")
+
+ggplot(lowincome) +
+  geom_point(mapping = aes(x = SOCIALINCOM, y = INCOME), alpha = 1/50) +
+  ggtitle("graph16")
+
+ggplot(lowincome, mapping = aes(x = SOCIALINCOM, y = INCOME)) +
+  geom_point(alpha = 1/50) +
+  geom_smooth(method = lm)
+  ggtitle("graph17")
+
+  
+# build model
+  
+model_income <- lm(INCOME ~ SOCIALINCOM, data = lowincome)
+summary(model_income)
+
+kable(summary(model_income)$coef,
+      caption = "table7")
+
+
+```
+
+
+## Appendix2-- the code I use but not show result in the report
+
+
+```{r  eval=FALSE, echo=TRUE}
+
+highincome <- raw_data_1%>%
+  filter(INCOME >= 100000)
+
+
+str(highincome)
+
+highincome %>%
+  ggplot(na.rm = T) +
+  geom_bar(
+    mapping = aes(x = war, fill = SCHL),
+    na.rm = T
+  )
+
+str(raw_data)
+
+head(lowincome)
+
+ggplot(data = lowincome, mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())
+
+ggplot(data = highincome, mapping = aes(x = SCHL, fill = SCHL)) +
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())
+
+lowincome %>%
+  group_by(DIS) %>%
+  summarise(
+    count = n()
+  )
+
+summary(lowincome$SOCIALINCOM)
+summary(raw_data_1$SOCIALINCOM)
+
+raw_data_1%>%
+  group_by(DIS) %>%
+  summarise(count = n())
+
+highincome %>%
+  group_by(DIS) %>%
+  summarise(count = n())
+
+lowincome %>%
+  group_by(COW) %>%
+  summarise(count = n())
+ 
+highincome %>%
+  group_by(COW) %>%
+  summarise(count = n())
+
+
+ggplot(data = raw_data_1) +
+  geom_point(mapping = aes(x = SOCIALINCOM, y = INCOME))
+
+
+ggplot(data = lowincome) +
+  geom_point(mapping = aes(x = SOCIALINCOM, y = INCOME, color = DIS))
+
+cor(lowincome$INCOME, lowincome$SOCIALINCOM)
+
+str(lowincome)
+
+lowincome %>%
+  group_by(HICOV) %>%
+  summarise(count = n())
+
+summary(raw_data)
+str(raw_data)
+
+model_data <- raw_data_1 %>%
+  mutate(low  = case_when(
+    INCOME <= 19200 ~ 1,
+    INCOME > 19200 ~ 0
+  ))
+ model1 <- glm(low~ DIS + SOCIALINCOM +as.numeric(SCHL), data = model_data)
+
+
+```
